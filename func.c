@@ -48,54 +48,80 @@ int scan(int *elem){
 	return 0;
 }
 
+int Dshow(Table *table){
+	print(table);
+	return 0;
+}
+
 void print(const Table *table){
 	for (int i = 0; i<=table->csize; i++){
 			printf("key: [%d], info: [%s]\n", table->ks[i].key, table->ks[i].info->info);
 	}
 }
 
-int add(Table *table){
-	int key, incor;
-	printf("Put a key :");
-	if (scan(&key)) return -1;
+
+
+int simkey(Table *table, int key){	
 	for (int i = 0; i<=table->csize; i++){
 		if (table->ks[i].key==key){
 			return 1;
 		}
 	}
-	char *str = readline("Put an info: ");
-	while (str==0){
-		return -1;
-	}
-	table->csize++;
-	table->ks[table->csize].key = key;
-	
-	if (table->ks[table->csize].info->info !=NULL){
-		free(table->ks[table->csize].info->info);
-	}
-	table->ks[table->csize].info->info = str;
-	table->ks[table->csize].info->key = key;
-	table->ks[table->csize].info->ind = table->csize;
-//	free(str);
 	return 0;
 }
 
-int input_file(Table *table, int key, char *str){
-	int incor;
-	for (int i = 0; i<=table->csize; i++){
-		if (table->ks[i].key==key){
-			return 1;
+int Dfile(Table *table){
+	char *file = "file.txt";
+	FILE *fp;
+	int key;
+	char *str = NULL;
+	OpenRead(file, &fp);
+       	while (1){
+		if (Read(fp, &key, &str)){
+			if (isFull(table)){
+				free(str);
+				break;
+			}
+			if (simkey(table, key)) continue;
+			add(table, key, str);
+		} else {
+			break;
 		}
 	}
+	return 0;
+}
+
+int Dadd(Table *table){
+	int key, incor;
+	printf("Put a key :");
+	if (scan(&key)) return 1;
+	if (simkey(table, key)){
+		printf("Put another key\n");
+		if (Dadd(table)){
+			return 1;
+		}
+		return 0;
+		
+	}
+	char *str = readline("Put an info: ");
+	while (str==0){
+		return 1;
+	}
+	add(table, key, str);
+	return 0;
+}
+
+int add(Table *table, int key, char *str){
 	table->csize++;
 	table->ks[table->csize].key = key;
 	
 	if (table->ks[table->csize].info->info !=NULL){
 		free(table->ks[table->csize].info->info);
 	}
-	table->ks[table->csize].info->info = str;
+	table->ks[table->csize].info->info = strdup(str);
 	table->ks[table->csize].info->key = key;
 	table->ks[table->csize].info->ind = table->csize;
+	free(str);
 	return 0;
 }
 
@@ -106,17 +132,30 @@ int isFull(Table *table){
 	return 0;
 }
 
-int delete(Table *table){
+int Ddelete(Table *table){
 	printf("Put key to delete\n");
 	int key, ind = -1, n;
 	if (scan(&key)) return 1;
+	if (delete(table, key)){
+		printf("There is no such key\n");
+	}
+	return 0;
+}
+
+int idElem(Table *table, int key){
+	int ind = -1;
 	for (int i = 0; i<=table->csize; i++){
 		if (table->ks[i].key==key){
 			ind = i;
 			break;
 		}
 	}
-	if (ind==-1) return 0;
+	return ind;
+}
+	
+int delete(Table *table, int key){
+	int ind;
+	if ((ind = idElem(table, key))==-1) return 1;
 	for (int i = ind; i<table->csize; i++){
 		free(table->ks[i].info->info);
 		table->ks[i].info->info = strdup(table->ks[i+1].info->info);
@@ -128,10 +167,18 @@ int delete(Table *table){
 	return 0;
 }
 
-char* find(Table *table){
+int Dfind(Table *table){
 	printf("Put key to find an elem\n");
 	int key;
-	if (scan(&key)) return "no elem\n";
+	if (scan(&key)){
+		printf("no elem\n");
+		return 1;
+	}
+	printf("%s\n", find(table, key));
+	return 0;
+}
+
+char* find(Table *table, int key){
 	for (int i = 0; i<=table->csize; i++){
 		if (table->ks[i].key==key){
 			return table->ks[i].info->info;
@@ -140,19 +187,26 @@ char* find(Table *table){
 	return "no elem\n";
 }
 
-void myFunc(Table *table, Table **table2){
+int Dtask(Table *table){
+	Table *tableCopy;
+	tableCopy = NewTable(table, table->msize);
 	printf("Put range of keys in format int-int\n");
 	int begin, end, size = 0;
 	scanf("%d%*c%d", &begin, &end);
+	myFunc(table, &tableCopy, begin, end);
+	print(tableCopy);
+	clearn(tableCopy);
+	return 0;
+}
+
+void myFunc(Table *table, Table **table2, int begin, int end){
+	char *s = NULL;
+	int key = 0;
 	for (int i = 0; i<=table->csize; i++){
 		if (begin<=table->ks[i].key && table->ks[i].key<=end){
-			size++;
-		}
-	}
-	(*table2) = NewTable((*table2), size);
-	for (int i = 0; i<=table->csize; i++){
-		if (begin<=table->ks[i].key && table->ks[i].key<=end){
-			input_file((*table2), table->ks[i].key, table->ks[i].info->info);
+			key = table->ks[i].key;
+			s = strdup(table->ks[i].info->info);
+			add((*table2), key, s);
 		}
 	}
 }
