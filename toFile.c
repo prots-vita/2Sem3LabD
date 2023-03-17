@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 
 int OpenWrite(char *file, FILE **fp){
 	if ((*fp = fopen(file, "w"))==NULL){
@@ -16,8 +18,10 @@ int OpenRead(char *file, FILE **fp){
 	return 0;
 }
 
-int Read(FILE *fp, char *c){
-	if ((*c = fgetc(fp))!=EOF){
+int Read(FILE *fp, int *key, char **str){
+	char s[81];
+	if (fscanf(fp, "%d %s", key, s)!=EOF){
+		(*str) = strdup(s);
 		return 1;
 	}
 	return 0;
