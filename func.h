@@ -1,41 +1,47 @@
 #ifndef _func_h_
 #define _func_h_
 
-typedef struct Item {
-	char *info;
-	int key;
-	int ind;
-}Item;
+typedef struct Node{
+	int release;
+	int info;
+	struct Node *next;
+} Node;
 
 typedef struct KeySpace{
-	int key;
-	Item *info;
+	char *key;
+	int info;
+	int release;
+	Node *node;
+	struct KeySpace *ksnext;
 }Key;
 
 typedef struct Table{
 	int msize;
 	int csize;
-	Key* ks;
+	Key** ks;
 }Table;	
 
-Table *NewTable(Table *table, int size);
 
-void clearn(Table *table);
+Table *NewTable(Table *, int);
 
-int scan(int *elem);
+void clearn(Table *);
 
-void print(const Table *table);
+int scan(int *);
 
-int add(Table *table);
+void print(const Table *);
 
-int input_file(Table *table, int key, char *str);
+Key *simkey(Table *, char *, int);	
 
-int isFull(Table *table);
+int add(Table *, char *, int);
 
-int delete(Table *table);
+int isFull(Table *);
 
-char* find(Table *table);
+int idElem(Table *, int);
+	
+int delete(Table *, int);
 
-void myFunc(Table *table, Table **table2);
+char* find(Table *, int);
+
+void myFunc(Table *, Table **, int, int);
 
 #endif
