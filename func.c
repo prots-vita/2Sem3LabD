@@ -2,37 +2,36 @@
 #include <stdlib.h>
 #include <string.h>
 #include <readline/readline.h>
-#include "toFile.h"
+//#include "toFile.h"
 #include "func.h"
+#include "dialogue.h"
 
 Table *NewTable(Table *table, int size){
 	table = malloc(1*sizeof(Table));
 	table->csize = -1;
 	table->msize = size;
-	table->ks = malloc((table->msize)*sizeof(Key));
+	table->ks = malloc((table->msize)*sizeof(Key *));
 	for (int i = 0; i<table->msize; i++){
-		table->ks[i].key = 0;
-		table->ks[i].info = malloc(1*sizeof(Item));
-		table->ks[i].info->info = NULL;
-		table->ks[i].info->key = 0;
-		table->ks[i].info->ind = 0;
+		table->ks[i] = NULL;
 	}
 	return table;
 }
 
-void clearn(Table *table){
+/*void clearn(Table *table){
 	for (int i = 0; i<table->msize; i++){
-		table->ks[i].key = 0;
-		if (table->ks[i].info->info!=NULL) free(table->ks[i].info->info);
-		table->ks[i].info->key = 0;
-		table->ks[i].info->ind = 0;
-		free(table->ks[i].info);
+		if (table->ks[i]->key != NULL){
+			free(table->ks[i]->key);
+		}
+		table->ks[i]->release = 0;
+		if (table->ks[i]->key != NULL){
+			free(table->ks[i]->key);
+		}
 	}
 	table->msize = 0;
 	table->csize = -1;
-	free(table->ks);
-	free(table);
-}
+	if (table->ks!=NULL) free(table->ks);
+	if (table!=NULL) free(table);
+}*/
 
 int scan(int *elem){
 	int n;
@@ -48,101 +47,111 @@ int scan(int *elem){
 	return 0;
 }
 
-int Dshow(Table *table){
-	print(table);
-	return 0;
+int strint(int elem){
+	int in = 0;
+	while (elem!=0){
+		in+=1;
+		elem/=10;
+	}
+	return in;
 }
+
 
 void print(const Table *table){
-	for (int i = 0; i<=table->csize; i++){
-			printf("key: [%d], info: [%s]\n", table->ks[i].key, table->ks[i].info->info);
-	}
-}
-
-
-
-int simkey(Table *table, int key){	
-	for (int i = 0; i<=table->csize; i++){
-		if (table->ks[i].key==key){
-			return 1;
+	Key* s = NULL;
+	for (int i = 0; i<table->msize; i++){
+		if (table->ks[i]==NULL){
+			continue;
 		}
-	}
-	return 0;
-}
-
-int Dfile(Table *table){
-	char *file = "file.txt";
-	FILE *fp;
-	int key;
-	char *str = NULL;
-	OpenRead(file, &fp);
-       	while (1){
-		if (Read(fp, &key, &str)){
-			if (isFull(table)){
-				free(str);
-				break;
+		printf("%d\n", i);
+		s = table->ks[i];
+		while (s!=NULL){
+			printf("{key: [%s], info: [%d], release: [%d]}\n", s->key, s->info, s->release);
+			if (s->node!=NULL){
+			Node *n = s->node;
+			while (n!=NULL){
+				printf("{key: [%s], info: [%d], release: [%d]}\n", s->key, n->info, n->release);
+				n = n->next;
 			}
-			if (simkey(table, key)) continue;
-			add(table, key, str);
-		} else {
-			break;
+			}
+			s = s->ksnext;
 		}
+		printf("\n");
 	}
-	return 0;
 }
 
-int Dadd(Table *table){
-	int key, incor;
-	printf("Put a key :");
-	if (scan(&key)) return 1;
-	if (simkey(table, key)){
-		printf("Put another key\n");
-		if (Dadd(table)){
-			return 1;
+
+
+Key* simkey(Table *table, char* key, int i){
+	if (table->ks[i]==NULL){
+		return NULL;
+	}
+	Key *s = table->ks[i];
+	while (s!=NULL){
+		if (strcmp(s->key, key)==0){
+			return s;
 		}
+		s = s->ksnext;
+	}
+	return NULL;
+}
+
+/*int index(Table *table, char *str){
+	return (str[0]-' ')%(table->msize);
+}*/
+
+Key* newKey(char *str, int info){
+	Key* new = malloc(1*sizeof(Key));
+	new->key = strdup(str);
+	new->info = info;
+	new->release = 1;
+	new->node = NULL;
+	new->ksnext = NULL;
+	return new;
+}
+
+Node* newNode(int info, int rel){
+	Node *new = malloc(1*sizeof(Node));
+	new->release = rel;
+	new->info = info;
+	new->next = NULL;
+	return new;
+}
+
+int add(Table *table, char *key, int elem){
+	int i = (key[0]-' ')%(table->msize);
+	Key *sim;
+	int rel = 1;
+	if ((sim = simkey(table, key, i))!=NULL){
+		if (sim->node!=NULL){
+			rel = sim->node->release+1;
+		}
+		Node *n = sim->node;
+		sim->node = newNode(elem, rel);
+		sim->node->next = n;
+		sim->release+=1;
 		return 0;
-		
 	}
-	char *str = readline("Put an info: ");
-	while (str==0){
-		return 1;
+	if (table->ks[i]==NULL){
+	//	table->csize+=1;
+		table->ks[i] = newKey(key, elem);
+		return 0;
 	}
-	add(table, key, str);
+	Key* s = table->ks[i];
+	table->ks[i] = newKey(key, elem);
+	table->ks[i]->ksnext = s;
 	return 0;
 }
 
-int add(Table *table, int key, char *str){
-	table->csize++;
-	table->ks[table->csize].key = key;
-	
-	if (table->ks[table->csize].info->info !=NULL){
-		free(table->ks[table->csize].info->info);
-	}
-	table->ks[table->csize].info->info = strdup(str);
-	table->ks[table->csize].info->key = key;
-	table->ks[table->csize].info->ind = table->csize;
-	free(str);
-	return 0;
-}
-
-int isFull(Table *table){
+/*int isFull(Table *table){
 	if (table->msize==(table->csize+1)){
 		return 1;
 	}
 	return 0;
-}
+}*/
 
-int Ddelete(Table *table){
-	printf("Put key to delete\n");
-	int key, ind = -1, n;
-	if (scan(&key)) return 1;
-	if (delete(table, key)){
-		printf("There is no such key\n");
-	}
-	return 0;
-}
 
-int idElem(Table *table, int key){
+/*int idElem(Table *table, int key){
 	int ind = -1;
 	for (int i = 0; i<=table->csize; i++){
 		if (table->ks[i].key==key){
@@ -151,9 +160,9 @@ int idElem(Table *table, int key){
 		}
 	}
 	return ind;
-}
+}*/
 	
-int delete(Table *table, int key){
+/*int delete(Table *table, int key){
 	int ind;
 	if ((ind = idElem(table, key))==-1) return 1;
 	for (int i = ind; i<table->csize; i++){
@@ -165,41 +174,21 @@ int delete(Table *table, int key){
 	}
 	table->csize--;
 	return 0;
-}
+}*/
 
-int Dfind(Table *table){
-	printf("Put key to find an elem\n");
-	int key;
-	if (scan(&key)){
-		printf("no elem\n");
-		return 1;
-	}
-	printf("%s\n", find(table, key));
-	return 0;
-}
 
-char* find(Table *table, int key){
-	for (int i = 0; i<=table->csize; i++){
-		if (table->ks[i].key==key){
+char* find(Table *table, char* key){
+	for (int i = 0; i<table->msize; i++){
+		if (table->ks[i]==NULL) continue;
+		if (strcmp(table->ks[i].key, key)){
 			return table->ks[i].info->info;
 		}
 	}
 	return "no elem\n";
 }
 
-int Dtask(Table *table){
-	Table *tableCopy;
-	tableCopy = NewTable(table, table->msize);
-	printf("Put range of keys in format int-int\n");
-	int begin, end, size = 0;
-	scanf("%d%*c%d", &begin, &end);
-	myFunc(table, &tableCopy, begin, end);
-	print(tableCopy);
-	clearn(tableCopy);
-	return 0;
-}
 
-void myFunc(Table *table, Table **table2, int begin, int end){
+/*void myFunc(Table *table, Table **table2, int begin, int end){
 	char *s = NULL;
 	int key = 0;
 	for (int i = 0; i<=table->csize; i++){
@@ -209,6 +198,6 @@ void myFunc(Table *table, Table **table2, int begin, int end){
 			add((*table2), key, s);
 		}
 	}
-}
+}*/
 
 
