@@ -3,7 +3,7 @@
 
 int OpenWrite(char *, FILE **);
 int OpenRead(char *, FILE **);
-int Read(FILE *, char *);
 int Write (FILE *, char );
+int Read(FILE *, int *, char **);
 
 #endif

@@ -17,21 +17,25 @@ Table *NewTable(Table *table, int size){
 	return table;
 }
 
-/*void clearn(Table *table){
+void clearn(Table *table){
 	for (int i = 0; i<table->msize; i++){
-		if (table->ks[i]->key != NULL){
+		while (table->ks[i] != NULL){
+			while (table->ks[i]->node!=NULL){
+				Node *n = table->ks[i]->node->next;
+				free(table->ks[i]->node);
+				table->ks[i]->node = n;
+			}
+			Key* s = table->ks[i]->ksnext;
 			free(table->ks[i]->key);
-		}
-		table->ks[i]->release = 0;
-		if (table->ks[i]->key != NULL){
-			free(table->ks[i]->key);
+			free(table->ks[i]);
+			table->ks[i] = s;
 		}
 	}
 	table->msize = 0;
 	table->csize = -1;
-	if (table->ks!=NULL) free(table->ks);
-	if (table!=NULL) free(table);
-}*/
+	free(table->ks);
+	free(table);
+}
 
 int scan(int *elem){
 	int n;
@@ -63,14 +67,14 @@ void print(const Table *table){
 		if (table->ks[i]==NULL){
 			continue;
 		}
-		printf("%d\n", i);
+		printf("[%d]\n", i);
 		s = table->ks[i];
 		while (s!=NULL){
-			printf("{key: [%s], info: [%d], release: [%d]}\n", s->key, s->info, s->release);
+			printf("	key: [%s] rel: [%d]\n", s->key, s->release);
 			if (s->node!=NULL){
 			Node *n = s->node;
 			while (n!=NULL){
-				printf("{key: [%s], info: [%d], release: [%d]}\n", s->key, n->info, n->release);
+				printf("		{info: [%d], release: [%d]}\n", n->info, n->release);
 				n = n->next;
 			}
 			}
@@ -81,8 +85,12 @@ void print(const Table *table){
 }
 
 
+int ind(Table *table, char *str){
+	return (str[0]-' ')%(table->msize);
+}
 
-Key* simkey(Table *table, char* key, int i){
+Key* simkey(Table *table, char* key, Key** prev){
+	int i = ind(table, key);
 	if (table->ks[i]==NULL){
 		return NULL;
 	}
@@ -91,24 +99,13 @@ Key* simkey(Table *table, char* key, int i){
 		if (strcmp(s->key, key)==0){
 			return s;
 		}
+		(*prev) = s;
 		s = s->ksnext;
 	}
 	return NULL;
 }
 
-/*int index(Table *table, char *str){
-	return (str[0]-' ')%(table->msize);
-}*/
 
-Key* newKey(char *str, int info){
-	Key* new = malloc(1*sizeof(Key));
-	new->key = strdup(str);
-	new->info = info;
-	new->release = 1;
-	new->node = NULL;
-	new->ksnext = NULL;
-	return new;
-}
 
 Node* newNode(int info, int rel){
 	Node *new = malloc(1*sizeof(Node));
@@ -118,11 +115,20 @@ Node* newNode(int info, int rel){
 	return new;
 }
 
+Key* newKey(char *str, int info, int rel){
+	Key* new = malloc(1*sizeof(Key));
+	new->key = str;
+	new->release = 1;
+	new->node = newNode(info, rel);
+	new->ksnext = NULL;
+	return new;
+}
+
 int add(Table *table, char *key, int elem){
-	int i = (key[0]-' ')%(table->msize);
-	Key *sim;
+	int i = ind(table, key);
+	Key *sim, *prev;
 	int rel = 1;
-	if ((sim = simkey(table, key, i))!=NULL){
+	if ((sim = simkey(table, key, &prev))!=NULL){
 		if (sim->node!=NULL){
 			rel = sim->node->release+1;
 		}
@@ -130,63 +136,123 @@ int add(Table *table, char *key, int elem){
 		sim->node = newNode(elem, rel);
 		sim->node->next = n;
 		sim->release+=1;
-		return 0;
+		return 1;
 	}
 	if (table->ks[i]==NULL){
-	//	table->csize+=1;
-		table->ks[i] = newKey(key, elem);
+		table->ks[i] = newKey(key, elem, 1);
 		return 0;
 	}
 	Key* s = table->ks[i];
-	table->ks[i] = newKey(key, elem);
+	table->ks[i] = newKey(key, elem, 1);
 	table->ks[i]->ksnext = s;
 	return 0;
 }
 
-/*int isFull(Table *table){
-	if (table->msize==(table->csize+1)){
-		return 1;
-	}
-	return 0;
-}*/
 
-
-/*int idElem(Table *table, int key){
-	int ind = -1;
-	for (int i = 0; i<=table->csize; i++){
-		if (table->ks[i].key==key){
-			ind = i;
-			break;
-		}
+void delKey(Table *table, int i, Key* s, Key* prev){
+	if (prev==NULL){
+		table->ks[i] = s->ksnext;
+	} else {
+		prev->ksnext = s->ksnext;
 	}
-	return ind;
-}*/
-	
-/*int delete(Table *table, int key){
-	int ind;
-	if ((ind = idElem(table, key))==-1) return 1;
-	for (int i = ind; i<table->csize; i++){
-		free(table->ks[i].info->info);
-		table->ks[i].info->info = strdup(table->ks[i+1].info->info);
-		table->ks[i].key = table->ks[i+1].key;
-		table->ks[i].info->key = table->ks[i+1].key;
-		table->ks[i].info->ind = table->ks[i+1].info->ind;
-	}
-	table->csize--;
-	return 0;
-}*/
-
-
-char* find(Table *table, char* key){
-	for (int i = 0; i<table->msize; i++){
-		if (table->ks[i]==NULL) continue;
-		if (strcmp(table->ks[i].key, key)){
-			return table->ks[i].info->info;
-		}
-	}
-	return "no elem\n";
+	free(s->key);
+	free(s);
+	return;
 }
 
+int deleteRes(Table *table, char *key, int release){
+	Key *s, *prev = NULL;
+	int i = ind(table, key);
+	s = simkey(table, key, &prev);
+	if (s==NULL || s->release<release){
+		return 1;
+	}
+	int flag = 0;
+	Node *n = s->node, *nprev = NULL;
+	while (n!=NULL){
+		if (release==n->release){
+			flag = 1;
+			break;
+		}
+//	for (int j = s->release; j>release; j--){
+//		n->release--;
+		nprev = n;
+		n = n->next;
+	}
+//	s->release--;
+	if (nprev!=NULL){
+		nprev->next = n->next;
+	} else {
+		s->node = n->next;
+	}
+	if (s->node==NULL){
+		delKey(table, i, s, prev);
+	}
+	free(n);
+	return 0;
+}
+	
+int delete(Table *table, char* key){
+	Key *s, *sr, *prev = NULL;
+	int i = ind(table, key);
+	s = simkey(table, key, &prev);
+	if (s==NULL){
+		return 1;
+	}
+	Node *n = s->node, *nr;
+	while (n!=NULL){
+		nr = n->next;
+		free(n);
+		n = nr;
+	}
+	delKey(table, i, s, prev);
+	return 0;
+}
+
+
+/*int* find(Table *table, char* key){
+	int *ar = malloc(80*sizeof(int));
+	ar[0] = 1;
+	Key *s, *prev;
+	s = simkey(table, key, &prev);
+	if (s==NULL){
+		return ar;
+	}
+	Node *n = s->node;
+	while (n!=NULL){
+		ar[0] += 1;
+		ar[ar[0]-1] = n->info;
+		n = n->next;
+	}
+	return ar;
+}*/
+
+int find1(Table *table, Table *tableCopy, char* key){
+	Key *s, *prev;
+	s = simkey(table, key, &prev);
+	if (s==NULL){
+		return 1;
+	}
+	Node *n = s->node;
+	while (n!=NULL){
+		add(tableCopy, key, n->info);
+		n = n->next;
+	}
+	return 0;
+}
+
+int findRes(Table *table, char* key, int release){
+	Key *s, *prev;
+	s = simkey(table, key, &prev);
+	if (s==NULL || s->release<release){
+		return -1;
+	}
+	Node *n = s->node;
+	for (int i = 1; i<release; i++){
+		n = n->next;
+	}
+	return n->info;
+}
 
 /*void myFunc(Table *table, Table **table2, int begin, int end){
 	char *s = NULL;

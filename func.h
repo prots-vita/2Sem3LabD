@@ -9,7 +9,6 @@ typedef struct Node{
 
 typedef struct KeySpace{
 	char *key;
-	int info;
 	int release;
 	Node *node;
 	struct KeySpace *ksnext;
@@ -30,7 +29,7 @@ int scan(int *);
 
 void print(const Table *);
 
-Key *simkey(Table *, char *, int);	
+Key *simkey(Table *, char *, Key**);	
 
 int add(Table *, char *, int);
 
@@ -38,9 +37,15 @@ int isFull(Table *);
 
 int idElem(Table *, int);
 	
-int delete(Table *, int);
+int delete(Table *, char *);
 
-char* find(Table *, int);
+int deleteRes(Table *, char *, int);
+
+//int* find(Table *, char *);
+
+int find1(Table *, Table *, char *);
+
+int findRes(Table *, char *, int);
 
 void myFunc(Table *, Table **, int, int);
 

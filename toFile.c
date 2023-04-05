@@ -20,7 +20,7 @@ int OpenRead(char *file, FILE **fp){
 
 int Read(FILE *fp, int *key, char **str){
 	char s[81];
-	if (fscanf(fp, "%d %s", key, s)!=EOF){
+	if (fscanf(fp, "%s %d", s, key)!=EOF){
 		(*str) = strdup(s);
 		return 1;
 	}
