@@ -3,7 +3,7 @@
 
 typedef struct Node{
 	int release;
-	int info;
+	int offset;
 	struct Node *next;
 } Node;
 
@@ -18,6 +18,9 @@ typedef struct Table{
 	int msize;
 	int csize;
 	Key** ks;
+	FILE *iofile;
+	char *file;
+	int n;
 }Table;	
 
 
@@ -25,13 +28,23 @@ Table *NewTable(Table *, int);
 
 void clearn(Table *);
 
+void returnTable(Table *, FILE *, char *);
+
+int saveTable(Table *);
+
+int readInfo(FILE *, int);
+
+void GoAndBack(FILE **, int, int, int);
+
 int scan(int *);
 
-void print(const Table *);
+void print(Table *, FILE *);
 
 Key *simkey(Table *, char *, Key**);	
 
-int add(Table *, char *, int);
+void copecode(Table *, FILE *, FILE *);
+
+int add(Table *, char *, int, int, int);
 
 int isFull(Table *);
 
